@@ -29,15 +29,13 @@ pipeline {
         
         // NOUVELLE ÉTAPE: Vérification de la qualité du code (exigence SonarQube)
         stage('Quality Analysis (SonarQube)') {
-            steps {
-                echo "Lancement de l'analyse SonarQube..."
-                sh """
-                mvn sonar:sonar \\
-                  -Dsonar.host.url=http://10.0.2.15:9000 \\ 
-                  -Dsonar.login=${SONAR_TOKEN} 
-                """
-            }
-        }
+    steps {
+        echo "Lancement de l'analyse SonarQube..."
+        sh """
+        mvn sonar:sonar -Dsonar.host.url=http://10.0.2.15:9000 -Dsonar.login=${SONAR_TOKEN}
+        """
+    }
+}
         
         stage('Archive Artifacts') {
             steps {
