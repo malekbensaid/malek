@@ -1,86 +1,97 @@
 pipeline {
     agent any
     
-    // NOUVELLE SECTION: Déclaration des variables globales
     environment {
-        // Nom de l'image Docker mis à jour
-        DOCKER_IMAGE = 'malek50/students-app:latest' 
-        // Le Jeton SonarQube valide
-        SONAR_TOKEN = 'squ_2f7edc6f021ad73990345fa234d13409675fdf2a'    }
-    
-    tools {
-        // Assurez-vous que l'outil Maven 'M2_HOME' est bien configuré dans Jenkins
-        maven 'M2_HOME' 
+        // Remplacer par votre nom d'utilisateur Docker Hub
+        DOCKER_USERNAME = 'malek50' 
+        
+        // Adresse IP de SonarQube et port
+        SONAR_HOST_URL = 'http://10.0.2.15:9000'
+        // Jeton SonarQube (à remplacer par le vôtre si différent)
+        SONAR_LOGIN = 'squ_2f7edc6f021ad73990345fa234d13409675fdf2a' 
     }
 
+    tools {
+        // Assurez-vous que ces outils sont configurés dans Jenkins
+        maven 'M3' 
+        jdk 'JDK17'
+        // Nous allons supposer que Docker est accessible sans tool specific
+    }
+    
     stages {
-        stage('Checkout') {
+        stage('Declarative: Checkout SCM') {
             steps {
-                echo "Clonage du dépôt Git ou accès au dossier synchronisé..."
+                checkout([
+                    $class: 'GitSCM', 
+                    branches: [[name: '*/master']], 
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [], 
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[credentialsId: 'malek-github-pat', url: 'https://github.com/malekbensaid/malek.git']]
+                ])
             }
         }
         
         stage('Build & Package') {
             steps {
-                echo "Compilation et packaging du projet (sans tests)..."
-                sh 'mvn package -DskipTests' 
+                echo 'Compilation et packaging du projet (sans tests)...'
+                sh 'mvn package -DskipTests'
             }
         }
-        
-        // NOUVELLE ÉTAPE: Vérification de la qualité du code (exigence SonarQube)
+
         stage('Quality Analysis (SonarQube)') {
-    steps {
-        echo "Lancement de l'analyse SonarQube..."
-        sh """
-        mvn sonar:sonar -Dsonar.host.url=http://10.0.2.15:9000 -Dsonar.login=${SONAR_TOKEN}
-        """
-    }
-}
-        
+            steps {
+                echo 'Lancement de l\'analyse SonarQube...'
+                sh "mvn sonar:sonar -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_LOGIN}"
+            }
+        }
+
         stage('Archive Artifacts') {
             steps {
-                echo "Archivage du JAR..."
+                echo 'Archivage du JAR...'
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
-        
-        // NOUVELLE ÉTAPE: Création de l'image Docker (exigence Dockerfile)
+
         stage('Build Docker Image') {
             steps {
-                echo "Construction de l'image Docker..."
-                sh 'sudo docker build -t ${DOCKER_IMAGE} .'
+                echo 'Construction de l\'image Docker...'
+                // CORRECTION 1: Suppression de 'sudo'
+                sh "docker build -t ${env.DOCKER_USERNAME}/students-app:latest ."
             }
         }
-        
-        // NOUVELLE ÉTAPE: Déploiement sur Docker Hub (exigence Docker Hub)
+
         stage('Push to Docker Hub') {
             steps {
-                echo "Authentification et déploiement sur Docker Hub..."
-                // Utilise les identifiants créés dans Jenkins (ID: 'docker-hub-credentials')
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
-                    sh 'sudo docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}'
-                    sh 'sudo docker push ${DOCKER_IMAGE}'
+                echo 'Authentification et déploiement sur Docker Hub...'
+                // Utilisation de l'identifiant stocké sous l'ID 'docker-hub-credentials'
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    // CORRECTION 2: Suppression de 'sudo' pour l'authentification
+                    sh "docker login -u ${env.DOCKER_USERNAME} -p ${env.DOCKER_PASSWORD}" 
+
+                    // CORRECTION 3: Suppression de 'sudo' pour le push
+                    sh "docker push ${env.DOCKER_USERNAME}/students-app:latest" 
                 }
             }
         }
-        
-        // NOUVELLE ÉTAPE: Déploiement sur Minikube (exigence Minikube)
+
         stage('Deploy to Minikube') {
             steps {
-                echo "Déploiement du cluster via kubectl..."
-                // Nécessite que vous ayez un fichier de déploiement Kubernetes (.yaml)
-                sh 'kubectl apply -f k8s/deployment.yaml'
+                echo 'Déploiement sur Minikube...'
+                // Application du Deployment YAML
+                sh 'kubectl apply -f k8s/deployment.yaml' 
             }
         }
     }
     
     post {
         always {
-            sh 'sudo docker logout' // Déconnexion de Docker Hub pour la sécurité
-            echo 'Pipeline terminé.'
+            echo 'Nettoyage des sessions Docker...'
+            // CORRECTION 4: Suppression de 'sudo' pour la déconnexion
+            sh 'docker logout' 
         }
         success {
-            echo 'Le build a réussi ! Le JAR est archivé et l\'image est déployée.'
+            echo 'Félicitations ! Le pipeline a réussi et l\'application est déployée sur Minikube.'
         }
         failure {
             echo 'Le build a échoué. Veuillez vérifier la sortie de la console.'
