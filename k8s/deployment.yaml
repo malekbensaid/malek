@@ -1,0 +1,34 @@
+# k8s/deployment.yaml - Déploiement Kubernetes de base
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: students-app-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: students-app
+  template:
+    metadata:
+      labels:
+        app: students-app
+    spec:
+      containers:
+      - name: students-app-container
+        # REMPLACEZ par le nom d'image exact de votre Jenkinsfile
+        image: malek50/student-management:latest
+        ports:
+        - containerPort: 8080
+---
+# k8s/service.yaml - Service pour exposer l'application
+apiVersion: v1
+kind: Service
+metadata:
+  name: students-app-service
+spec:
+  type: LoadBalancer # Ou NodePort si LoadBalancer non supporté par Minikube
+  selector:
+    app: students-app
+  ports:
+  - port: 80
+    targetPort: 8080
