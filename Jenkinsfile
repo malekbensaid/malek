@@ -3,7 +3,7 @@ pipeline {
     
     // NOUVELLE SECTION: Déclaration des variables globales
     environment {
-        // Le nom de votre image sur Docker Hub (à remplacer par votre nom d'utilisateur)
+        // Le nom de votre image sur Docker Hub (CORRIGÉ avec malek50)
         DOCKER_IMAGE = 'malek50/student-management:latest'
         // Le Jeton SonarQube valide qui a fonctionné
         SONAR_TOKEN = 'squ_59669dae40f1829cd795dddd0624af4ce19a62f9'
@@ -24,8 +24,8 @@ pipeline {
         stage('Build & Package') {
             steps {
                 echo "Compilation et packaging du projet (sans tests)..."
-                // On utilise 'sudo -u vagrant' car c'est l'utilisateur qui a accès au code synchronisé
-                sh 'sudo -u vagrant mvn package -DskipTests' 
+                // CORRIGÉ : Suppression de 'sudo -u vagrant'
+                sh 'mvn package -DskipTests' 
             }
         }
         
@@ -34,8 +34,9 @@ pipeline {
             steps {
                 echo "Lancement de l'analyse SonarQube..."
                 sh """
-                sudo -u vagrant mvn sonar:sonar \
-                  -Dsonar.host.url=http://localhost:9000 \
+                # CORRIGÉ : Suppression de 'sudo -u vagrant'
+                mvn sonar:sonar \\
+                  -Dsonar.host.url=http://localhost:9000 \\
                   -Dsonar.token=${SONAR_TOKEN}
                 """
             }
