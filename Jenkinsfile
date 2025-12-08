@@ -6,8 +6,7 @@ pipeline {
         // Nom de l'image Docker mis à jour
         DOCKER_IMAGE = 'malek50/students-app:latest' 
         // Le Jeton SonarQube valide
-        SONAR_TOKEN = 'squ_59669dae40f1829cd795dddd0624af4ce19a62f9'
-    }
+        SONAR_TOKEN = 'squ_2f7edc6f021ad73990345fa234d13409675fdf2a'    }
     
     tools {
         // Assurez-vous que l'outil Maven 'M2_HOME' est bien configuré dans Jenkins
@@ -32,11 +31,10 @@ pipeline {
         stage('Quality Analysis (SonarQube)') {
             steps {
                 echo "Lancement de l'analyse SonarQube..."
-                // CORRIGÉ : Suppression du commentaire Groovy dans le script shell qui causait l'erreur de syntaxe.
                 sh """
                 mvn sonar:sonar \\
                   -Dsonar.host.url=http://10.0.2.15:9000 \\ 
-                  -Dsonar.token=${SONAR_TOKEN}
+                  -Dsonar.login=${SONAR_TOKEN} 
                 """
             }
         }
