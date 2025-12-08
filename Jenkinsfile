@@ -3,8 +3,8 @@ pipeline {
     
     // NOUVELLE SECTION: Déclaration des variables globales
     environment {
-        // Le nom de votre image sur Docker Hub (CORRIGÉ avec malek50)
-        DOCKER_IMAGE = 'malek50/student-management:latest'
+        // CORRIGÉ : Nom de l'image Docker mis à jour pour correspondre à votre dépôt Docker Hub
+        DOCKER_IMAGE = 'malek50/students-app:latest' 
         // Le Jeton SonarQube valide qui a fonctionné
         SONAR_TOKEN = 'squ_59669dae40f1829cd795dddd0624af4ce19a62f9'
     }
@@ -34,9 +34,9 @@ pipeline {
             steps {
                 echo "Lancement de l'analyse SonarQube..."
                 sh """
-                # CORRIGÉ : Suppression de 'sudo -u vagrant'
                 mvn sonar:sonar \\
-                  -Dsonar.host.url=http://localhost:9000 \\
+                  // CORRIGÉ : Utilisation de l'IP de la VM 10.0.2.15 au lieu de localhost
+                  -Dsonar.host.url=http://10.0.2.15:9000 \\ 
                   -Dsonar.token=${SONAR_TOKEN}
                 """
             }
@@ -53,7 +53,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Construction de l'image Docker..."
-                // Utilise le Dockerfile que vous avez créé à la racine du projet
                 sh 'sudo docker build -t ${DOCKER_IMAGE} .'
             }
         }

@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: students-app-container
-        # REMPLACEZ par le nom d'image exact de votre Jenkinsfile
-        image: malek50/student-management:latest
+        # CORRIGÉ : Le nom de l'image doit correspondre à votre dépôt Docker Hub
+        image: malek50/students-app:latest 
         ports:
         - containerPort: 8080
 ---
