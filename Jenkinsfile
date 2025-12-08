@@ -3,9 +3,9 @@ pipeline {
     
     // NOUVELLE SECTION: Déclaration des variables globales
     environment {
-        // CORRIGÉ : Nom de l'image Docker mis à jour pour correspondre à votre dépôt Docker Hub
+        // Nom de l'image Docker mis à jour
         DOCKER_IMAGE = 'malek50/students-app:latest' 
-        // Le Jeton SonarQube valide qui a fonctionné
+        // Le Jeton SonarQube valide
         SONAR_TOKEN = 'squ_59669dae40f1829cd795dddd0624af4ce19a62f9'
     }
     
@@ -24,7 +24,6 @@ pipeline {
         stage('Build & Package') {
             steps {
                 echo "Compilation et packaging du projet (sans tests)..."
-                // CORRIGÉ : Suppression de 'sudo -u vagrant'
                 sh 'mvn package -DskipTests' 
             }
         }
@@ -33,9 +32,9 @@ pipeline {
         stage('Quality Analysis (SonarQube)') {
             steps {
                 echo "Lancement de l'analyse SonarQube..."
+                // CORRIGÉ : Suppression du commentaire Groovy dans le script shell qui causait l'erreur de syntaxe.
                 sh """
                 mvn sonar:sonar \\
-                  // CORRIGÉ : Utilisation de l'IP de la VM 10.0.2.15 au lieu de localhost
                   -Dsonar.host.url=http://10.0.2.15:9000 \\ 
                   -Dsonar.token=${SONAR_TOKEN}
                 """
