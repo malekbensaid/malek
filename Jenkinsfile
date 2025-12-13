@@ -1,71 +1,55 @@
 pipeline {
     agent any
-    
-    // Déclaration des variables d'environnement
-    environment {
-        // VOS CREDENTIALS ET LIENS
-        // Utilisé pour le push sur Docker Hub
-        DOCKER_USERNAME = 'malek50'  
-        
-        // Configuration SonarQube. J'utilise 127.0.0.1:9001 comme URL si c'est la bonne.
-        SONAR_HOST_URL = 'http://127.0.0.1:9001' 
-        
-        // Jeton SonarQube. NOTE: L'idéal est de le stocker comme un secret Jenkins, mais je le laisse ici
-        // comme dans votre modèle pour l'analyse.
-        SONAR_LOGIN = 'squ_2f7edc6f021ad73990345fa234d13409675fdf2a' 
+
+    // Déclare les outils (Maven, JDK) pour les étapes de compilation et de test
+    tools {
+        maven "M3"
+        jdk 'JDK17'
     }
 
-    // Déclaration des outils configurés dans Jenkins
-    tools {
-        maven 'M3'  // Assurez-vous que l'ID 'M3' correspond à votre configuration Maven
-        jdk 'JDK17' // Assurez-vous que l'ID 'JDK17' correspond à votre configuration JDK
-    }
-    
     stages {
-        stage('Checkout SCM') {
+        stage('Git: Checkout SCM') {
             steps {
                 echo 'Clonage du code depuis GitHub...'
+                // Utilisation de VOS URL et Credentials ID
                 checkout([
                     $class: 'GitSCM', 
                     branches: [[name: '*/master']], 
-                    // Utilisation de votre ID de credentials pour GitHub
                     userRemoteConfigs: [[credentialsId: 'malek-github-pat', url: 'https://github.com/malekbensaid/malek.git']]
                 ])
             }
         }
-        
-        stage('Build & Package') {
+
+        stage('Build with Maven') {
             steps {
-                echo 'Compilation et packaging du projet...'
+                echo 'Nettoyage et compilation...'
                 sh 'mvn clean install'
             }
         }
-
-        stage('Run Unit Tests') {
+        
+        stage('Run Tests') {
             steps {
                 echo 'Exécution des tests unitaires...'
                 sh 'mvn test'
             }
         }
         
-        stage('Quality Analysis (SonarQube)') {
+        stage('MVN SONARQUBE') {
             steps {
-                echo 'Lancement de l\'analyse SonarQube...'
-                // Utilisation des variables d'environnement pour l'authentification SonarQube
-                sh "mvn sonar:sonar -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_LOGIN}"
+                echo 'Lancement de l\'analyse SonarQube avec votre Jeton personnel...'
+                // Utilise votre ID de credential Sonar pour une meilleure sécurité
+                withCredentials([string(credentialsId: 'SONAR_TOKEN_JENKINS', variable: 'SONAR_TOKEN' )]) {
+                    sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
+                }
             }
         }
-
-        stage('Jacoco Code Coverage') {
+        
+        stage('Jacoco Static Analysis') {
             steps {
                 echo 'Analyse de la couverture de code Jacoco...'
-                // Publication des rapports JUnit et Jacoco
+                // Publie les rapports de tests
                 junit 'target/surefire-reports/**/*.xml'
-                jacoco(
-                    execPattern: '**/target/jacoco.exec', 
-                    classPattern: '**/target/classes', 
-                    sourcePattern: '**/src/main/java'
-                )
+                jacoco() // Utilise la fonction Jacoco
             }
         }
 
@@ -75,77 +59,92 @@ pipeline {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
-
+        
         stage('Build Docker Image') {
             steps {
-                echo "Construction de l\'image Docker: ${env.DOCKER_USERNAME}/students-app:latest"
-                sh "docker build -t ${env.DOCKER_USERNAME}/students-app:latest ."
+                echo "Construction de l\'image Docker: malek50/students-app:latest"
+                // Utilise VOS tags Docker
+                sh 'docker build -t malek50/students-app:latest -f Dockerfile .'
             }
         }
-
+        
         stage('Push to Docker Hub') {
             steps {
                 echo 'Authentification et déploiement sur Docker Hub...'
-                // Utilisation de l'ID d'identifiant pour Docker Hub
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
-                    sh "docker push ${env.DOCKER_USERNAME}/students-app:latest"
+                // Utilise l'ID de credential standard pour Docker Hub
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                        // Pousse VOS tags Docker
+                        sh 'docker push malek50/students-app:latest'
+                    }
                 }
             }
         }
         
-        stage('Deploy to Nexus') {
+        stage('Docker Compose') {
             steps {
-                echo 'Déploiement de l\'artefact sur Nexus...'
-                // Nécessite une configuration correcte de Nexus dans le settings.xml de Maven
-                sh 'mvn deploy'
+                echo 'Démarrage des services avec Docker Compose...'
+                sh 'docker-compose up -d' // Commande du professeur
             }
         }
 
-        stage('Deploy to Kubernetes (Minikube)') {
+        stage('Deploy to Nexus') {
             steps {
+                echo 'Déploiement de l\'artefact sur Nexus...'
+                sh 'mvn deploy' // Commande du professeur
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+             steps {
                 echo 'Application du déploiement Kubernetes (students-app)...'
-                // CORRECTION APPLIQUÉE : Utilisation du chemin racine 'deployment.yaml'
+                // Utilise votre chemin racine corrigé
                 sh 'kubectl apply -f deployment.yaml'  
             }
         }
         
-        stage('Prometheus & Grafana') {
+        // --- ÉTAPES D'INFRASTRUCTURE ET MONITORING ---
+        
+        stage('Prometheus') {
             steps {
-                echo 'Démarrage des conteneurs de monitoring...'
-                sh 'docker start prometheus || echo "Prometheus déjà démarré ou non trouvé"'
-                sh 'docker start grafana || echo "Grafana déjà démarré ou non trouvé"'
+                sh 'docker start prometheus' // Commande du professeur
             }
         }
-
-        stage('Terraform Apply') {
+        
+        stage('Grafana') {
             steps {
-                echo 'Initialisation et application de Terraform...'
-                // Ceci suppose que les fichiers Terraform (.tf) sont à la racine du workspace
-                sh 'terraform init'  
-                sh 'terraform apply -auto-approve'
+                sh 'docker start grafana' // Commande du professeur
+            }
+        }
+        
+        stage('Terraform') {
+            steps {
+                echo 'Lancement des commandes Terraform...'
+                sh 'terraform init'
+                sh 'terraform apply -auto-approve' // Commandes du professeur
             }
         }
     }
     
     post {
-        always {
-            echo 'Nettoyage des sessions Docker...'
-            sh 'docker logout || true'
-        }
         success {
-            echo '✅ SUCCÈS : Le pipeline a réussi et l\'application est déployée.'
-            // Si vous avez configuré le plugin Email Extension, vous pouvez ajouter :
-            /* emailext(
+            echo 'Build réussi. Envoi de la notification de succès.'
+            // Utilise VOTRE email pour la notification de succès
+            emailext(
                 subject: "Build Success: ${currentBuild.fullDisplayName}",
                 body: "Le pipeline a réussi. Voir les détails du build ici: ${env.BUILD_URL}",
-                to: 'votre_email@example.com' 
+                to: 'malekbensaid50@gmail.com' 
             )
-            */
         }
         failure {
-            echo '❌ ÉCHEC : Le build a échoué. Veuillez vérifier la sortie de la console.'
-            // Ajouter ici une notification d'échec si nécessaire
+            echo 'Build échoué. Envoi de la notification d\'échec.'
+            // Utilise VOTRE email pour la notification d'échec
+            emailext(
+                subject: "Build Failed: ${currentBuild.fullDisplayName}",
+                body: "Le pipeline a échoué. Voir les détails du build ici: ${env.BUILD_URL}",
+                to: 'malekbensaid50@gmail.com' 
+            )
         }
     }
 }
