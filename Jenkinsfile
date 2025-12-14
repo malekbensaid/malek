@@ -4,6 +4,7 @@ pipeline {
     // Variables globales du pipeline
     environment {
         // --- Variables de Configuration ---
+	SONAR_HOST_URL = 'http://10.0.2.15:9000'
         DOCKER_IMAGE = 'malek50/students-app'
         DOCKER_TAG = 'latest'
         NAMESPACE = 'devops'
