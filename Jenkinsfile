@@ -36,15 +36,17 @@ pipeline {
                 sh 'sudo docker rm -f sonarqube || true'
                 sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
 
-                echo "Attente de la disponibilité de SonarQube (max 120 secondes)..." // Augmentation du temps
-                
+                echo "Attente de la disponibilité de SonarQube (max 120 secondes)..."
+
                 // NOUVELLE VÉRIFICATION : Attend un code HTTP 200 sur l'API version
                 sh """
-                    MAX_ATTEMPTS=120  # Deux minutes d'attente
+                    MAX_ATTEMPTS=120
+                    SONAR_URL="${SONAR_HOST_URL}/api/server/version"
                     
                     for i in \$(seq 1 \${MAX_ATTEMPTS}); do
-                        HTTP_CODE=\$(curl -o /dev/null -s -w "%{http_code}" ${SONAR_HOST_URL}/api/server/version)
-                        
+                        # Tenter d'obtenir le code HTTP, ignorer les erreurs de connexion temporaires (|| true)
+                        HTTP_CODE=\$(curl -o /dev/null -s -w "%{http_code}" "\${SONAR_URL}" || true)
+
                         if [ "\$HTTP_CODE" = "200" ]; then
                             echo "SonarQube est opérationnel (Code HTTP 200 reçu après \$i secondes)."
                             exit 0
@@ -53,16 +55,15 @@ pipeline {
                         echo "Tentative #\$i : Statut actuel: \$HTTP_CODE. Attente 1s..."
                         sleep 1
                     done
-                    echo "Erreur: SonarQube n'a pas démarré dans les \${MAX_ATTEMPTS} secondes." && exit 1
+                    
+                    echo "Erreur: SonarQube n'a pas démarré dans les \${MAX_ATTEMPTS} secondes."
+                    exit 1
                 """
-                
-                // Le délai supplémentaire n'est plus nécessaire si l'attente est basée sur HTTP 200/204
-                // mais nous le laissons pour être extra-prudent, après l'attente de la boucle
+
                 echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."
                 sh 'sleep 30'
             }
         }
-
         // --- ÉTAPE 3 : Compilation & Analyse de Qualité ---
         stage('3. Build & Quality Analysis') {
             steps {
