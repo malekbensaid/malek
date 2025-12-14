@@ -65,18 +65,25 @@ pipeline {
             }
         }
         // --- ÉTAPE 3 : Compilation & Analyse de Qualité ---
-        stage('3. Build & Quality Analysis') {
-            steps {
-                echo "2. Compilation (Maven) et analyse SonarQube."
-                // Le withCredentials utilise l'ID 'SONAR_TOKEN'
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube 9.9') {
-                        // Exécuter Maven clean install ET lancer l'analyse SonarQube
-                        sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
-                    }
-                }
+stage('3. Build & Quality Analysis') {
+    steps {
+        echo "2. Compilation (Maven) et analyse SonarQube."
+        
+        // --- NOUVELLES LIGNES DE DÉBOGAGE POUR VÉRIFIER QUE SONARQUBE TOURNE VRAIMENT ---
+        echo "Vérification des logs SonarQube avant l'analyse..."
+        sh 'sudo docker ps -a | grep sonarqube'
+        sh 'sudo docker logs sonarqube --tail 50' // Affiche les 50 dernières lignes
+        // ----------------------------------------------------------------------------------
+
+        // Le reste de l'étape 3 (le code qui échoue)
+        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
+            withSonarQubeEnv('SonarQube 9.9') {
+                // Exécuter Maven clean install ET lancer l'analyse SonarQube
+                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
             }
         }
+    }
+}
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
         stage('4. Docker Build and Push') {
