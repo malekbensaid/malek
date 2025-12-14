@@ -79,18 +79,17 @@ pipeline {
                 // Supprime le cluster, qu'il ait été créé avec driver=none ou autre.
                 sh 'sudo minikube delete || true'
                 
-                echo "Démarrage de Minikube (en utilisant le driver Docker)..."
-                // Démarrage propre avec le driver Docker
-                sh 'sudo minikube start --driver=docker' 
+                echo "Démarrage de Minikube (en utilisant le driver Docker et --force pour l'utilisateur root)..."
+                // AJOUT DE --force pour autoriser l'exécution en tant que root/sudo avec le driver docker
+                sh 'sudo minikube start --driver=docker --force' 
 
                 sh 'sudo minikube status'
                 echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
-                // Utiliser l'utilisateur 'jenkins' qui exécute la pipeline
-                // Nous utilisons ${USER} pour cibler l'utilisateur qui exécute le script shell (souvent root ou jenkins)
+                // Utiliser l'utilisateur 'jenkins' qui exécute la pipeline (si $USER n'est pas root)
                 sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true'
             }
         }
-
+     
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
         stage('5. Deploy to Kubernetes') {
             steps {
