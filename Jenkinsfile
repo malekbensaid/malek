@@ -82,20 +82,20 @@ stage('4.5. Start Minikube') {
                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
                 sh 'sudo sysctl fs.protected_regular=0' 
 
-                // L'environnement Jenkins a la variable, nous allons la passer explicitement à sudo.
                 withEnv(["MINIKUBE_HOME=${WORKSPACE}/minikube_home"]) {
                     echo "Nettoyage de tout cluster Minikube existant..."
-                    sh 'sudo minikube delete || true'
+                    sh 'sudo MINIKUBE_HOME="${WORKSPACE}/minikube_home" minikube delete || true'
                     
-                    echo "Démarrage de Minikube avec HOME dans le workspace..."
-                    // Solution : Utiliser la variable MINIKUBE_HOME dans la commande sh
-                    sh 'sudo MINIKUBE_HOME="${WORKSPACE}/minikube_home" minikube start --driver=docker --force --memory=2048mb' 
+                    echo "Démarrage de Minikube avec HOME dans le workspace (Utilisation du driver 'none' pour éviter les conflits de root)..."
+                    // CHANGEMENT CLÉ : Utilisation de --driver=none
+                    sh 'sudo MINIKUBE_HOME="${WORKSPACE}/minikube_home" minikube start --driver=none --force --memory=2048mb' 
 
-                    sh 'sudo minikube status'
+                    echo "Attribution des permissions au fichier kubeconfig pour l'utilisateur Jenkins..."
+                    // Ces répertoires sont créés par root, Jenkins doit y accéder pour l'étape 'Deploy'
+                    sh 'sudo chown -R $USER:$USER $HOME/.kube || true'
+                    sh 'sudo chown -R $USER:$USER $HOME/.minikube || true' 
                     
-                    echo "Configuration des droits d'accès au cluster pour l'utilisateur Jenkins..."
-                    // Nous devons maintenant rendre le fichier de configuration Minikube (kubeconfig) accessible à Jenkins.
-                    sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube ${WORKSPACE}/minikube_home || true'
+                    sh 'minikube status'
                 }
             }
         }
