@@ -12,8 +12,6 @@ pipeline {
         // Nom du fichier de déploiement dans le dépôt
         DEPLOYMENT_FILE = 'deployment.yaml'
 
-        // Variables pour la connexion à SonarQube
-        SONAR_HOST_URL = 'http://127.0.0.1:9000'
         
         // Variable pour contourner le problème DNS de K8s
         SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-service:3306/db_example?useSSL=false'
@@ -131,4 +129,5 @@ stage('3. Build & Quality Analysis') {
             cleanWs()
         }
     }
+
 }
