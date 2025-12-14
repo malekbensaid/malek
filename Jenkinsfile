@@ -9,12 +9,12 @@ pipeline {
         NAMESPACE = 'devops'
         
         // Nom du fichier de déploiement dans le dépôt
-        DEPLOYMENT_FILE = 'deployment.yaml' 
+        DEPLOYMENT_FILE = 'deployment.yaml'
 
         // Variables pour la connexion à SonarQube
         SONAR_HOST_URL = 'http://127.0.0.1:9000'
         
-        // Variable pour contourner le problème DNS de K8s (si besoin, nous allons tester d'abord sans)
+        // Variable pour contourner le problème DNS de K8s
         SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-service:3306/db_example?useSSL=false'
     }
 
@@ -29,30 +29,32 @@ pipeline {
         }
         
         // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
-              // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
-stage('2. Start SonarQube') {
-            steps {
-                echo "Démarrage du conteneur SonarQube via Docker..."
-                sh 'sudo docker rm -f sonarqube || true' // Ajout de || true
-                sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
-                
-                echo "Attente de la disponibilité de SonarQube (max 60 secondes)..."
-                sh """
-                    for i in \$(seq 1 60); do
-                        # ... (votre vérification API) ...
-                        if curl -s ${SONAR_HOST_URL}/api/server/version | grep -q '{"errors":[{"msg":"Unknown url : /api/server/version"}]}' ; then
-                            echo "SonarQube est prêt (réponse HTTP reçue) (\$i secondes)."
-                            exit 0
-                        fi
-                        sleep 1
-                    done
-                    echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
-                """
-                
-                // **AJOUTEZ CECI :**
-                **echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."**
-                **sh 'sleep 30'**             }
-        }  }
+        stage('2. Start SonarQube') {
+            steps {
+                echo "Démarrage du conteneur SonarQube via Docker..."
+                // Supprimer l'ancien conteneur s'il existe
+                sh 'sudo docker rm -f sonarqube || true'
+                // Lancer le nouveau conteneur
+                sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
+                
+                echo "Attente de la disponibilité de SonarQube (max 60 secondes)..."
+                // Boucle de vérification de l'API (HTTP)
+                sh """
+                    for i in \$(seq 1 60); do
+                        if curl -s ${SONAR_HOST_URL}/api/server/version | grep -q '{"errors":[{"msg":"Unknown url : /api/server/version"}]}' ; then
+                            echo "SonarQube est prêt (réponse HTTP reçue) (\$i secondes)."
+                            exit 0
+                        fi
+                        sleep 1
+                    done
+                    echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
+                """
+                
+                // **CORRECTION du problème de stabilité interne:** Délai supplémentaire
+                echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."
+                sh 'sleep 30'
+            }
+        }
 
         // --- ÉTAPE 3 : Compilation & Analyse de Qualité ---
         stage('3. Build & Quality Analysis') {
@@ -60,7 +62,7 @@ stage('2. Start SonarQube') {
                 echo "2. Compilation (Maven) et analyse SonarQube."
                 // Le withCredentials utilise l'ID 'SONAR_TOKEN'
                 withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube 9.9') { 
+                    withSonarQubeEnv('SonarQube 9.9') {
                         // Exécuter Maven clean install ET lancer l'analyse SonarQube
                         sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
                     }
@@ -92,7 +94,6 @@ stage('2. Start SonarQube') {
                 echo "5. Déploiement de l'application sur Minikube (K8S)."
                 
                 // --- STRATÉGIE DE DÉPLOIEMENT ---
-                // 1. Mise à jour de la variable d'environnement (datasource URL) dans le déploiement YAML
                 // On utilise le nom du service 'mysql-service'
                 sh """
                     # Assurez-vous que le namespace existe (redondant, mais sécurisant)
