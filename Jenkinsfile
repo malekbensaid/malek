@@ -29,26 +29,30 @@ pipeline {
         }
         
         // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
-        stage('2. Start SonarQube') {
-            steps {
-                echo "Démarrage du conteneur SonarQube via Docker..."
-                // Nettoyer et relancer le conteneur SonarQube sur le port 9000
-                sh 'sudo docker rm -f sonarqube'
-                sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
-                
-                echo "Attente de la disponibilité de SonarQube (max 60 secondes)..."
-                sh """
-                    for i in \$(seq 1 60); do
-                        curl -s ${SONAR_HOST_URL}/api/server/version && echo "SonarQube est prêt (\$i secondes)." && exit 0
-                        sleep 1
-                    done
-                    echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
-                """
-		**// AJOUT CRITIQUE : Temps de latence pour le service interne (passer de STARTING à UP)**
+              // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
+        stage('2. Start SonarQube') {
+            steps {
+                echo "Démarrage du conteneur SonarQube via Docker..."
+                sh 'sudo docker rm -f sonarqube || true' // Ajout de || true
+                sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
+                
+                echo "Attente de la disponibilité de SonarQube (max 60 secondes)..."
+                sh """
+                    for i in \$(seq 1 60); do
+                        # ... (votre vérification API) ...
+                        if curl -s ${SONAR_HOST_URL}/api/server/version | grep -q '{"errors":[{"msg":"Unknown url : /api/server/version"}]}' ; then
+                            echo "SonarQube est prêt (réponse HTTP reçue) (\$i secondes)."
+                            exit 0
+                        fi
+                        sleep 1
+                    done
+                    echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
+                """
+                
+                // **AJOUTEZ CECI :**
                 **echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."**
-                **sh 'sleep 30'**
-            }
-        }
+                **sh 'sleep 30'**             }
+        }  }
 
         // --- ÉTAPE 3 : Compilation & Analyse de Qualité ---
         stage('3. Build & Quality Analysis') {
