@@ -83,7 +83,17 @@ pipeline {
                 }
             }
         }
-
+stage('4.5. Start Minikube') {
+    steps {
+        echo "Démarrage de Minikube (si non démarré)..."
+        // Utiliser 'sudo' car l'utilisateur jenkins n'a peut-être pas les droits docker/minikube
+        sh 'sudo minikube start || true' 
+        sh 'sudo minikube status' // Vérifier si le cluster est bien démarré
+        echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins/Root..."
+        // Cette commande est souvent nécessaire pour que l'utilisateur sous lequel Jenkins s'exécute puisse utiliser kubectl.
+        sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube'
+    }
+}
         // --- ÉTAPE 5 : Déploiement sur Kubernetes ---
         stage('5. Deploy to Kubernetes') {
             steps {
