@@ -74,7 +74,7 @@ stage('3. Build & Quality Analysis') {
         withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
             withSonarQubeEnv('SonarQube 9.9') {
                 // Utilise uniquement le Token pour l'authentification (via sonar.login)
-                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
+                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL} -X"
             }
         }
     }
