@@ -72,17 +72,22 @@ pipeline {
             }
         }
         
-        // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
+// --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
         stage('4.5. Start Minikube') {
             steps {
+                echo "Nettoyage de tout cluster Minikube existant..."
+                // Supprime le cluster, qu'il ait été créé avec driver=none ou autre.
+                sh 'sudo minikube delete || true'
+                
                 echo "Démarrage de Minikube (en utilisant le driver Docker)..."
-                // Tenter de démarrer avec le driver Docker et en tant que root/sudo
+                // Démarrage propre avec le driver Docker
                 sh 'sudo minikube start --driver=docker' 
 
                 sh 'sudo minikube status'
                 echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
                 // Utiliser l'utilisateur 'jenkins' qui exécute la pipeline
-                sh 'sudo chown -R jenkins /var/lib/jenkins/.kube /var/lib/jenkins/.minikube || true'
+                // Nous utilisons ${USER} pour cibler l'utilisateur qui exécute le script shell (souvent root ou jenkins)
+                sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true'
             }
         }
 
