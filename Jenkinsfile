@@ -72,11 +72,11 @@ stage('3. Build & Quality Analysis') {
         
         // Injecte le Token de l'ID 'SONAR_TOKEN' dans la variable SONAR_AUTH_TOKEN
         withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
-            withSonarQubeEnv('SonarQube 9.9') {
-                // Utilise uniquement le Token pour l'authentification (via sonar.login)
-                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL} -X"
-            }
-        }
+    withSonarQubeEnv('SonarQube 9.9') {
+        sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.projectKey=tn.esprit:student-management -Dsonar.projectName=student-management"
+        //                                                                              ^-- AJOUT CRITIQUE POUR LE PREMIER BUILD
+    }
+}
     }
 }
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
