@@ -19,6 +19,13 @@ spec:
         image: malek50/students-app:latest 
         ports:
         - containerPort: 8080
+	env: 
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-service:3306/db_example?useSSL=false"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "root" 
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "password" 
 ---
 # k8s/service.yaml - Service pour exposer l'application
 apiVersion: v1

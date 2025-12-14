@@ -94,30 +94,23 @@ stage('4.5. Start Minikube') {
         sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube'
     }
 }
-        // --- ÉTAPE 5 : Déploiement sur Kubernetes ---
-        stage('5. Deploy to Kubernetes') {
-            steps {
-                echo "5. Déploiement de l'application sur Minikube (K8S)."
-                
-                // --- STRATÉGIE DE DÉPLOIEMENT ---
-                // On utilise le nom du service 'mysql-service'
-                sh """
-                    # Assurez-vous que le namespace existe (redondant, mais sécurisant)
-                    minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f -
-                    
-                    # Mise à jour du fichier YAML pour injecter l'URL (utilise la variable d'env K8S)
-                    sed "s|SPRING_DATASOURCE_URL_PLACEHOLDER|${SPRING_DATASOURCE_URL}|g" ${DEPLOYMENT_FILE} > updated_${DEPLOYMENT_FILE}
-                    
-                    # Appliquer la configuration K8S
-                    minikube kubectl -- apply -f updated_${DEPLOYMENT_FILE} -n ${NAMESPACE}
-                    
-                    # Redémarrer l'application pour utiliser la nouvelle image/configuration
-                    minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
-                """
-            }
-        }
-    }
-    
+// --- ÉTAPE 5 : Déploiement sur Kubernetes ---
+        stage('5. Deploy to Kubernetes') {
+            steps {
+                echo "5. Déploiement de l'application sur Minikube (K8S)."
+                
+                sh """
+                    # 1. Assurez-vous que le namespace existe
+                    minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f - || true
+                    
+                    # 2. Appliquer la configuration K8S (deployment.yaml contient maintenant tout)
+                    minikube kubectl -- apply -f ${DEPLOYMENT_FILE} -n ${NAMESPACE}
+                    
+                    # 3. Redémarrer (rollout) le déploiement après les changements (si nécessaire)
+                    minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
+                """
+            }
+        }            
     // --- POST-ACTIONS : Nettoyage ---
     post {
         always {
