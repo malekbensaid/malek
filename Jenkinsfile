@@ -80,23 +80,22 @@ stage('4. Docker Build and Push') {
 stage('4.5. Start Minikube') {
             steps {
                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
-                // On garde ceci, car cela peut être un prérequis de l'environnement hôte.
                 sh 'sudo sysctl fs.protected_regular=0' 
 
-                // Utilisation de MINIKUBE_HOME pour éviter les problèmes de permission dans /tmp
-                withEnv(["MINIKUBE_HOME=${WORKSPACE}/minikube_home"]) { // Utilisez un chemin dans le workspace
+                // L'environnement Jenkins a la variable, nous allons la passer explicitement à sudo.
+                withEnv(["MINIKUBE_HOME=${WORKSPACE}/minikube_home"]) {
                     echo "Nettoyage de tout cluster Minikube existant..."
                     sh 'sudo minikube delete || true'
                     
-                    echo "Démarrage de Minikube (en utilisant le driver Docker et --force et 2 Go de RAM)..."
-                    // Ajout du memory fix pour plus de stabilité
-                    sh 'sudo minikube start --driver=docker --force --memory=2048mb' 
+                    echo "Démarrage de Minikube avec HOME dans le workspace..."
+                    // Solution : Utiliser la variable MINIKUBE_HOME dans la commande sh
+                    sh 'sudo MINIKUBE_HOME="${WORKSPACE}/minikube_home" minikube start --driver=docker --force --memory=2048mb' 
 
                     sh 'sudo minikube status'
                     
-                    // Cette commande DOIT rester DANS le bloc withEnv pour utiliser le bon chemin Minikube.
-                    echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
-                    sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true' // On garde la ligne d'origine, même si elle sera moins utile
+                    echo "Configuration des droits d'accès au cluster pour l'utilisateur Jenkins..."
+                    // Nous devons maintenant rendre le fichier de configuration Minikube (kubeconfig) accessible à Jenkins.
+                    sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube ${WORKSPACE}/minikube_home || true'
                 }
             }
         }
