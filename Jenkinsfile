@@ -75,16 +75,16 @@ stage('3. Build & Quality Analysis') {
         sh 'sudo docker logs sonarqube --tail 50' // Affiche les 50 dernières lignes
         // ----------------------------------------------------------------------------------
 
-        // Le reste de l'étape 3 (le code qui échoue)
-        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
+        // Correction ici : ON ASSOCIE LE SECRET AU NOM DE VARIABLE QU'ON UTILISE.
+        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_PASSWORD')]) {
             withSonarQubeEnv('SonarQube 9.9') {
-                // Exécuter Maven clean install ET lancer l'analyse SonarQube
-                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
+                // Utilise login=admin et le secret stocké ('admin') comme mot de passe.
+                // NOTE : Le nom de variable ici DOIT être SONAR_AUTH_PASSWORD
+                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=admin -Dsonar.password=${SONAR_AUTH_PASSWORD} -Dsonar.host.url=${SONAR_HOST_URL}"
             }
         }
     }
 }
-
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
         stage('4. Docker Build and Push') {
             steps {
