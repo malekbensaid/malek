@@ -71,7 +71,7 @@ pipeline {
             steps {
                 echo "4. Construction et Push de l'image Docker."
                 // Utiliser l'ID de credential pour Docker Hub
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-new-pat', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     // Se connecter à Docker Hub
                     sh "sudo docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
                     
