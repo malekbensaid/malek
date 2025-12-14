@@ -1,90 +1,116 @@
 pipeline {
     agent any
 
-    // Les outils requis pour la compilation
-    tools {
-        maven "M3" // Assurez-vous que l'alias M3 est configuré dans Jenkins
-        jdk 'JDK17' // Assurez-vous que l'alias JDK17 est configuré dans Jenkins
+    // Variables globales du pipeline
+    environment {
+        // --- Variables de Configuration ---
+        DOCKER_IMAGE = 'malek50/students-app'
+        DOCKER_TAG = 'latest'
+        NAMESPACE = 'devops'
+        
+        // Nom du fichier de déploiement dans le dépôt
+        DEPLOYMENT_FILE = 'deployment.yaml' 
+
+        // Variables pour la connexion à SonarQube
+        SONAR_HOST_URL = 'http://127.0.0.1:9000'
+        
+        // Variable pour contourner le problème DNS de K8s (si besoin, nous allons tester d'abord sans)
+        SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-service:3306/db_example?useSSL=false'
     }
 
     stages {
-        stage('Git: Checkout SCM') {
+        // --- ÉTAPE 1 : Préparation & Récupération du Code (GitHub) ---
+        stage('1. Checkout Code') {
             steps {
-                echo '1. Clonage du code depuis GitHub...'
-                // Utilisation de votre dépôt et Credential ID
-                checkout([
-                    $class: 'GitSCM', 
-                    branches: [[name: '*/master']], 
-                    userRemoteConfigs: [[credentialsId: 'malek-github-pat', url: 'https://github.com/malekbensaid/malek.git']] 
-                ])
+                echo "1. Clonage du code depuis GitHub..."
+                // Utiliser l'ID de credential que vous avez configuré pour GitHub
+                git branch: 'master', credentialsId: 'malek-github-pat', url: 'https://github.com/malekbensaid/malek.git'
+            }
+        }
+        
+        // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
+        stage('2. Start SonarQube') {
+            steps {
+                echo "Démarrage du conteneur SonarQube via Docker..."
+                // Nettoyer et relancer le conteneur SonarQube sur le port 9000
+                sh 'sudo docker rm -f sonarqube'
+                sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
+                
+                echo "Attente de la disponibilité de SonarQube (max 60 secondes)..."
+                sh """
+                    for i in \$(seq 1 60); do
+                        curl -s ${SONAR_HOST_URL}/api/server/version && echo "SonarQube est prêt (\$i secondes)." && exit 0
+                        sleep 1
+                    done
+                    echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
+                """
             }
         }
 
-        stage('Build & Package (Skip Tests)') {
+        // --- ÉTAPE 3 : Compilation & Analyse de Qualité ---
+        stage('3. Build & Quality Analysis') {
             steps {
-                echo '2. Compilation et packaging de l\'application (Tests ignorés).'
-                // COMMANDE CORRIGÉE : Utilisation de -DskipTests pour contourner l\'échec
-                sh 'mvn clean package -DskipTests' 
-            }
-        }
-        
-        stage('Quality Analysis (SonarQube)') {
-            steps {
-                echo '3. Lancement de l\'analyse SonarQube.'
-                // Utilisation de votre Credential ID Sonar
-                withCredentials([string(credentialsId: 'SONAR_TOKEN_JENKINS', variable: 'SONAR_TOKEN' )]) {
-                    sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN -DskipTests' // on garde le skip tests ici aussi
-                }
-            }
-        }
-        
-        stage('Build Docker Image') {
-            steps {
-                echo "4. Construction de l\'image Docker: malek50/students-app:latest"
-                // Utilisation de votre nom d'image
-                sh 'docker build -t malek50/students-app:latest -f Dockerfile .'
-            }
-        }
-        
-        stage('Push to Docker Hub') {
-            steps {
-                echo '5. Authentification et push sur Docker Hub...'
-                script {
-                    // Utilisation de votre Credential ID Docker Hub
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-new-pat', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
-                        sh 'docker push malek50/students-app:latest'
+                echo "2. Compilation (Maven) et analyse SonarQube."
+                // Le withCredentials utilise l'ID 'SONAR_TOKEN'
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
+                    withSonarQubeEnv('SonarQube 9.9') { 
+                        // Exécuter Maven clean install ET lancer l'analyse SonarQube
+                        sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
                     }
                 }
             }
         }
-        
-        stage('Deploy to Kubernetes') {
-             steps {
-                echo '6. Déploiement de l\'application sur Kubernetes.'
-                // Utilisation du chemin corrigé 'deployment.yaml'
-                sh 'kubectl apply -f deployment.yaml'  
+
+        // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
+        stage('4. Docker Build and Push') {
+            steps {
+                echo "4. Construction et Push de l'image Docker."
+                // Utiliser l'ID de credential pour Docker Hub
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    // Se connecter à Docker Hub
+                    sh "sudo docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
+                    
+                    // Construire l'image (le .jar a été créé à l'étape 3)
+                    sh "sudo docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                    
+                    // Pousser l'image vers Docker Hub
+                    sh "sudo docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                }
+            }
+        }
+
+        // --- ÉTAPE 5 : Déploiement sur Kubernetes ---
+        stage('5. Deploy to Kubernetes') {
+            steps {
+                echo "5. Déploiement de l'application sur Minikube (K8S)."
+                
+                // --- STRATÉGIE DE DÉPLOIEMENT ---
+                // 1. Mise à jour de la variable d'environnement (datasource URL) dans le déploiement YAML
+                // On utilise le nom du service 'mysql-service'
+                sh """
+                    # Assurez-vous que le namespace existe (redondant, mais sécurisant)
+                    minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f -
+                    
+                    # Mise à jour du fichier YAML pour injecter l'URL (utilise la variable d'env K8S)
+                    sed "s|SPRING_DATASOURCE_URL_PLACEHOLDER|${SPRING_DATASOURCE_URL}|g" ${DEPLOYMENT_FILE} > updated_${DEPLOYMENT_FILE}
+                    
+                    # Appliquer la configuration K8S
+                    minikube kubectl -- apply -f updated_${DEPLOYMENT_FILE} -n ${NAMESPACE}
+                    
+                    # Redémarrer l'application pour utiliser la nouvelle image/configuration
+                    minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
+                """
             }
         }
     }
     
-    // Notifications
+    // --- POST-ACTIONS : Nettoyage ---
     post {
-        success {
-            echo '✅ Succès : Pipeline CI/CD terminée.'
-            emailext(
-                subject: "Build Success: ${currentBuild.fullDisplayName}",
-                body: "Le pipeline a réussi. Voir les détails du build ici: ${env.BUILD_URL}",
-                to: 'malekbensaid50@gmail.com' 
-            )
-        }
-        failure {
-            echo '❌ Échec : Le build a échoué.'
-            emailext(
-                subject: "Build Failed: ${currentBuild.fullDisplayName}",
-                body: "Le pipeline a échoué. Voir les détails du build ici: ${env.BUILD_URL}",
-                to: 'malekbensaid50@gmail.com' 
-            )
+        always {
+            echo "Nettoyage : Arrêt et suppression du conteneur SonarQube..."
+            sh "sudo docker rm -f sonarqube"
+            // Nettoyage de l'espace de travail Jenkins
+            cleanWs()
         }
     }
 }
