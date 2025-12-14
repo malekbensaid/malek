@@ -75,12 +75,14 @@ pipeline {
         // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
         stage('4.5. Start Minikube') {
             steps {
-                echo "Démarrage de Minikube (si non démarré)..."
-                sh 'sudo minikube start || true' 
+                echo "Démarrage de Minikube (en utilisant le driver Docker)..."
+                // Tenter de démarrer avec le driver Docker et en tant que root/sudo
+                sh 'sudo minikube start --driver=docker' 
+
                 sh 'sudo minikube status'
-                echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins/Root..."
-                // Utiliser '|| true' pour que l'étape ne plante pas si $USER ou $HOME ne sont pas définis
-                sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true'
+                echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
+                // Utiliser l'utilisateur 'jenkins' qui exécute la pipeline
+                sh 'sudo chown -R jenkins /var/lib/jenkins/.kube /var/lib/jenkins/.minikube || true'
             }
         }
 
