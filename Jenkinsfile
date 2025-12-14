@@ -80,21 +80,26 @@ stage('4. Docker Build and Push') {
 stage('4.5. Start Minikube') {
             steps {
                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
+                // Toujours nécessaire pour éviter certains conflits de permissions
                 sh 'sudo sysctl fs.protected_regular=0' 
 
+                // Utilisation de withEnv pour définir le chemin de Minikube dans le workspace
                 withEnv(["MINIKUBE_HOME=${WORKSPACE}/minikube_home"]) {
-                    echo "Nettoyage de tout cluster Minikube existant..."
+                    
+                    echo "Nettoyage de tout cluster Minikube existant (en s'assurant que MINIKUBE_HOME est utilisé)..."
+                    // On passe explicitement la variable MINIKUBE_HOME à sudo pour la suppression
                     sh 'sudo MINIKUBE_HOME="${WORKSPACE}/minikube_home" minikube delete || true'
                     
-                    echo "Démarrage de Minikube avec HOME dans le workspace (Utilisation du driver 'none' pour éviter les conflits de root)..."
-                    // CHANGEMENT CLÉ : Utilisation de --driver=none
+                    echo "Démarrage de Minikube (Driver 'none' pour contourner les problèmes de permission root/docker)..."
+                    // CHANGEMENT CLÉ : Utilisation de --driver=none pour la stabilité en CI/VM
                     sh 'sudo MINIKUBE_HOME="${WORKSPACE}/minikube_home" minikube start --driver=none --force --memory=2048mb' 
 
                     echo "Attribution des permissions au fichier kubeconfig pour l'utilisateur Jenkins..."
-                    // Ces répertoires sont créés par root, Jenkins doit y accéder pour l'étape 'Deploy'
+                    // Les fichiers de configuration sont générés par root (sudo), on doit les rendre accessibles à l'utilisateur Jenkins ($USER)
                     sh 'sudo chown -R $USER:$USER $HOME/.kube || true'
                     sh 'sudo chown -R $USER:$USER $HOME/.minikube || true' 
-                    
+
+                    echo "Vérification du statut de Minikube..."
                     sh 'minikube status'
                 }
             }
