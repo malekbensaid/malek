@@ -29,28 +29,35 @@ pipeline {
         }
         
         // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
+// --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
         stage('2. Start SonarQube') {
             steps {
                 echo "Démarrage du conteneur SonarQube via Docker..."
-                // Supprimer l'ancien conteneur s'il existe
                 sh 'sudo docker rm -f sonarqube || true'
-                // Lancer le nouveau conteneur
                 sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
+
+                echo "Attente de la disponibilité de SonarQube (max 120 secondes)..." // Augmentation du temps
                 
-                echo "Attente de la disponibilité de SonarQube (max 60 secondes)..."
-                // Boucle de vérification de l'API (HTTP)
+                // NOUVELLE VÉRIFICATION : Attend un code HTTP 200 sur l'API version
                 sh """
-                    for i in \$(seq 1 60); do
-                        if curl -s ${SONAR_HOST_URL}/api/server/version | grep -q '{"errors":[{"msg":"Unknown url : /api/server/version"}]}' ; then
-                            echo "SonarQube est prêt (réponse HTTP reçue) (\$i secondes)."
+                    MAX_ATTEMPTS=120  # Deux minutes d'attente
+                    
+                    for i in \$(seq 1 \${MAX_ATTEMPTS}); do
+                        HTTP_CODE=\$(curl -o /dev/null -s -w "%{http_code}" ${SONAR_HOST_URL}/api/server/version)
+                        
+                        if [ "\$HTTP_CODE" = "200" ]; then
+                            echo "SonarQube est opérationnel (Code HTTP 200 reçu après \$i secondes)."
                             exit 0
                         fi
+                        
+                        echo "Tentative #\$i : Statut actuel: \$HTTP_CODE. Attente 1s..."
                         sleep 1
                     done
-                    echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
+                    echo "Erreur: SonarQube n'a pas démarré dans les \${MAX_ATTEMPTS} secondes." && exit 1
                 """
                 
-                // **CORRECTION du problème de stabilité interne:** Délai supplémentaire
+                // Le délai supplémentaire n'est plus nécessaire si l'attente est basée sur HTTP 200/204
+                // mais nous le laissons pour être extra-prudent, après l'attente de la boucle
                 echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."
                 sh 'sleep 30'
             }
