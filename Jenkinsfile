@@ -26,38 +26,37 @@ pipeline {
         }
         
         // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
-        stage('2. Start SonarQube') {
+stage('2. Start SonarQube') {
             steps {
                 echo "Démarrage du conteneur SonarQube via Docker..."
-                sh 'sudo docker rm -f sonarqube || true'
+                sh 'sudo docker rm -f sonarqube || true' // Ajout de || true pour éviter le crash si non trouvé
                 sh 'sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:9.9-community'
 
                 echo "Attente de la disponibilité de SonarQube (max 120 secondes)..."
-
-                sh """
+                sh '''
                     MAX_ATTEMPTS=120
-                    SONAR_URL="${SONAR_HOST_URL}/api/server/version"
+                    # Correction de l'IP pour utiliser localhost (127.0.0.1) car le port est mappé sur l'hôte
+                    SONAR_URL=http://127.0.0.1:9000/api/server/version
                     
-                    for i in \$(seq 1 \${MAX_ATTEMPTS}); do
-                        HTTP_CODE=\$(curl -o /dev/null -s -w "%{http_code}" "\${SONAR_URL}" || true)
-
-                        if [ "\$HTTP_CODE" = "200" ]; then
-                            echo "SonarQube est opérationnel (Code HTTP 200 reçu après \$i secondes)."
+                    for i in $(seq 1 $MAX_ATTEMPTS); do
+                        HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" $SONAR_URL || true)
+                        if [ "$HTTP_CODE" = "200" ]; then
+                            echo "SonarQube est opérationnel (Code HTTP 200 reçu après $i secondes)."
                             exit 0
+                        elif [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "404" ]; then
+                             echo "ATTENTION: Statut inattendu: $HTTP_CODE. Logs SonarQube pour diagnostic:"
+                             sudo docker logs sonarqube
                         fi
-                        
-                        echo "Tentative #\$i : Statut actuel: \$HTTP_CODE. Attente 1s..."
+                        echo "Tentative #$i : Statut actuel: $HTTP_CODE. Attente 1s..."
                         sleep 1
                     done
-                    
-                    echo "Erreur: SonarQube n'a pas démarré dans les \${MAX_ATTEMPTS} secondes."
+                    echo "Erreur: SonarQube n'a pas démarré dans les 120 secondes."
                     exit 1
-                """
-
+                '''
                 echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."
                 sh 'sleep 30'
             }
-        }
+        }    
         
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
