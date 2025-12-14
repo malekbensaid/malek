@@ -30,7 +30,7 @@ pipeline {
         
         // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
               // --- ÉTAPE 2 : Démarrage de l'Analyse (SonarQube) ---
-        stage('2. Start SonarQube') {
+stage('2. Start SonarQube') {
             steps {
                 echo "Démarrage du conteneur SonarQube via Docker..."
                 sh 'sudo docker rm -f sonarqube || true' // Ajout de || true
