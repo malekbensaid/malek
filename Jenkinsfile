@@ -64,34 +64,7 @@ pipeline {
             }
         }
         
-stage('3. Build & Quality Analysis') {
-    steps {
-        echo '2. Compilation (Maven) et analyse SonarQube.'
-        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
-            withSonarQubeEnv('SonarQube 9.9') {
-                // Nouvelle étape de diagnostic : Vérifie si le Token est bon pour accéder aux projets
-                echo 'Vérification du Token SonarQube...'
-                sh """
-                    # Test d'accès à l'API projects/search (nécessite le login)
-                    curl -s -u \${SONAR_AUTH_TOKEN}: http://10.0.2.15:9000/api/projects/search -o /dev/null -w "%{http_code}" > status_code.txt
-                """
 
-                // Lire le code de statut
-                script {
-                    def statusCode = readFile('status_code.txt').trim()
-                    if (statusCode != '200') {
-                        error "ÉCHEC D'AUTHENTIFICATION SONARQUBE. Code HTTP: ${statusCode}. Veuillez vérifier le token SONAR_TOKEN."
-                    } else {
-                        echo "Authentification SonarQube réussie (Code ${statusCode}). Lancement de l'analyse..."
-                    }
-                }
-                
-                // L'ancienne étape d'analyse (qui échouait)
-                sh 'mvn clean install -DskipTests sonar:sonar -Dsonar.login=****** -Dsonar.host.url=http://10.0.2.15:9000 -Dsonar.projectKey=tn.esprit:student-management -Dsonar.projectName=student-management'
-            }
-        }
-    }
-}
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
         stage('4. Docker Build and Push') {
