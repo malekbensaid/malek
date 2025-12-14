@@ -79,18 +79,21 @@ stage('4. Docker Build and Push') {
 // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
 stage('4.5. Start Minikube') {
             steps {
+                echo "Désactivation temporaire de la protection du noyau pour Minikube..."
+                // Correction pour HOST_JUJU_LOCK_PERMISSION
+                sh 'sudo sysctl fs.protected_regular=0' 
+
                 echo "Nettoyage de tout cluster Minikube existant..."
                 sh 'sudo minikube delete || true'
                 
-                echo "Démarrage de Minikube (en utilisant le driver Docker et --force pour l'utilisateur root)..."
-                sh 'sudo minikube start --driver=docker --force' // <--- DOIT AVOIR --force
+                echo "Démarrage de Minikube (en utilisant le driver Docker et --force)..."
+                sh 'sudo minikube start --driver=docker --force' 
 
                 sh 'sudo minikube status'
                 echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
                 sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true'
             }
-        }
-     
+        }    
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
         stage('5. Deploy to Kubernetes') {
             steps {
