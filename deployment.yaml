@@ -1,4 +1,3 @@
-# k8s/deployment.yaml - Déploiement Kubernetes de base
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,17 +14,16 @@ spec:
     spec:
       containers:
       - name: students-app-container
-        # CORRIGÉ : Le nom de l'image doit correspondre à votre dépôt Docker Hub
         image: malek50/students-app:latest 
         ports:
         - containerPort: 8080
-	env: 
-        - name: SPRING_DATASOURCE_URL
-          value: "jdbc:mysql://mysql-service:3306/db_example?useSSL=false"
-        - name: SPRING_DATASOURCE_USERNAME
-          value: "root" 
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: "password" 
+        env: # <--- AJOUTEZ LE BLOC ENV POUR LA CONNEXION DB
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-service:3306/db_example?useSSL=false"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "root" # (OU VOTRE UTILISATEUR MYSQL)
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "password" # (OU VOTRE MOT DE PASSE MYSQL)
 ---
 # k8s/service.yaml - Service pour exposer l'application
 apiVersion: v1
@@ -33,7 +31,7 @@ kind: Service
 metadata:
   name: students-app-service
 spec:
-  type: LoadBalancer # Ou NodePort si LoadBalancer non supporté par Minikube
+  type: LoadBalancer 
   selector:
     app: students-app
   ports:
