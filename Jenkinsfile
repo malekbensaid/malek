@@ -64,25 +64,19 @@ pipeline {
                 sh 'sleep 30'
             }
         }
-        // --- ÉTAPE 3 : Compilation & Analyse de Qualité ---
+        
+
 stage('3. Build & Quality Analysis') {
     steps {
         echo "2. Compilation (Maven) et analyse SonarQube."
         
-        // --- NOUVELLES LIGNES DE DÉBOGAGE POUR VÉRIFIER QUE SONARQUBE TOURNE VRAIMENT ---
-        echo "Vérification des logs SonarQube avant l'analyse..."
-        sh 'sudo docker ps -a | grep sonarqube'
-        sh 'sudo docker logs sonarqube --tail 50' // Affiche les 50 dernières lignes
-        // ----------------------------------------------------------------------------------
-
-        // Correction ici : ON ASSOCIE LE SECRET AU NOM DE VARIABLE QU'ON UTILISE.
-        // L'injection de la variable doit correspondre au nom de la variable dans la commande sh
-withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_PASSWORD')]) {
-    withSonarQubeEnv('SonarQube 9.9') {
-        // Utiliser login=admin et le secret comme mot de passe
-        sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=admin -Dsonar.password=${SONAR_AUTH_PASSWORD} -Dsonar.host.url=${SONAR_HOST_URL}"
-    }
-}
+        // Injecte le Token de l'ID 'SONAR_TOKEN' dans la variable SONAR_AUTH_TOKEN
+        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
+            withSonarQubeEnv('SonarQube 9.9') {
+                // Utilise uniquement le Token pour l'authentification (via sonar.login)
+                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
+            }
+        }
     }
 }
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
