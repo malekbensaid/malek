@@ -80,20 +80,26 @@ stage('4. Docker Build and Push') {
 stage('4.5. Start Minikube') {
             steps {
                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
-                // Correction pour HOST_JUJU_LOCK_PERMISSION
+                // On garde ceci, car cela peut être un prérequis de l'environnement hôte.
                 sh 'sudo sysctl fs.protected_regular=0' 
 
-                echo "Nettoyage de tout cluster Minikube existant..."
-                sh 'sudo minikube delete || true'
-                
-                echo "Démarrage de Minikube (en utilisant le driver Docker et --force)..."
-                sh 'sudo minikube start --driver=docker --force' 
+                // Utilisation de MINIKUBE_HOME pour éviter les problèmes de permission dans /tmp
+                withEnv(["MINIKUBE_HOME=${WORKSPACE}/minikube_home"]) { // Utilisez un chemin dans le workspace
+                    echo "Nettoyage de tout cluster Minikube existant..."
+                    sh 'sudo minikube delete || true'
+                    
+                    echo "Démarrage de Minikube (en utilisant le driver Docker et --force et 2 Go de RAM)..."
+                    // Ajout du memory fix pour plus de stabilité
+                    sh 'sudo minikube start --driver=docker --force --memory=2048mb' 
 
-                sh 'sudo minikube status'
-                echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
-                sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true'
+                    sh 'sudo minikube status'
+                    
+                    // Cette commande DOIT rester DANS le bloc withEnv pour utiliser le bon chemin Minikube.
+                    echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
+                    sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true' // On garde la ligne d'origine, même si elle sera moins utile
+                }
             }
-        }    
+        }
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
         stage('5. Deploy to Kubernetes') {
             steps {
