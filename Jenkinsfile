@@ -44,6 +44,9 @@ pipeline {
                     done
                     echo "Erreur: SonarQube n'a pas démarré à temps." && exit 1
                 """
+		**// AJOUT CRITIQUE : Temps de latence pour le service interne (passer de STARTING à UP)**
+                **echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."**
+                **sh 'sleep 30'**
             }
         }
 
