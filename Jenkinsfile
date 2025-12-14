@@ -61,7 +61,11 @@ pipeline {
         
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
-        stage('4. Docker Build and Push') {
+stage('4. Docker Build and Push') {
+            options {
+                // Tente de ré-exécuter le stage 3 fois en cas d'échec
+                retry(3) 
+            }
             steps {
                 echo "4. Construction et Push de l'image Docker."
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-new-pat', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
@@ -73,19 +77,16 @@ pipeline {
         }
         
 // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
-        stage('4.5. Start Minikube') {
+stage('4.5. Start Minikube') {
             steps {
                 echo "Nettoyage de tout cluster Minikube existant..."
-                // Supprime le cluster, qu'il ait été créé avec driver=none ou autre.
                 sh 'sudo minikube delete || true'
                 
                 echo "Démarrage de Minikube (en utilisant le driver Docker et --force pour l'utilisateur root)..."
-                // AJOUT DE --force pour autoriser l'exécution en tant que root/sudo avec le driver docker
-                sh 'sudo minikube start --driver=docker --force' 
+                sh 'sudo minikube start --driver=docker --force' // <--- DOIT AVOIR --force
 
                 sh 'sudo minikube status'
                 echo "Attribution des droits d'accès à Kubernetes pour l'utilisateur Jenkins..."
-                // Utiliser l'utilisateur 'jenkins' qui exécute la pipeline (si $USER n'est pas root)
                 sh 'sudo chown -R $USER $HOME/.kube $HOME/.minikube || true'
             }
         }
