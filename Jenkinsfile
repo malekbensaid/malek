@@ -76,13 +76,13 @@ stage('3. Build & Quality Analysis') {
         // ----------------------------------------------------------------------------------
 
         // Correction ici : ON ASSOCIE LE SECRET AU NOM DE VARIABLE QU'ON UTILISE.
-        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_PASSWORD')]) {
-            withSonarQubeEnv('SonarQube 9.9') {
-                // Utilise login=admin et le secret stocké ('admin') comme mot de passe.
-                // NOTE : Le nom de variable ici DOIT être SONAR_AUTH_PASSWORD
-                sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=admin -Dsonar.password=${SONAR_AUTH_PASSWORD} -Dsonar.host.url=${SONAR_HOST_URL}"
-            }
-        }
+        // L'injection de la variable doit correspondre au nom de la variable dans la commande sh
+withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_PASSWORD')]) {
+    withSonarQubeEnv('SonarQube 9.9') {
+        // Utiliser login=admin et le secret comme mot de passe
+        sh "mvn clean install -DskipTests sonar:sonar -Dsonar.login=admin -Dsonar.password=${SONAR_AUTH_PASSWORD} -Dsonar.host.url=${SONAR_HOST_URL}"
+    }
+}
     }
 }
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
