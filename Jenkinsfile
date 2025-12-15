@@ -151,7 +151,7 @@ stage('4.5. Start Minikube') {
                     sh 'minikube status'
                 }
             }
-        
+
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
         stage('5. Deploy to Kubernetes') {
             steps {
@@ -211,7 +211,7 @@ stage('6. Deployment Validation') {
                 '''
             } // <--- Fermeture du bloc steps {} à la fin du stage
         }
-    
+   }
     // --- POST-ACTIONS : Nettoyage ---
     post {
         always {
