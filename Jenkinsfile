@@ -211,7 +211,7 @@ stage('6. Deployment Validation') {
                 '''
             } // <--- Fermeture du bloc steps {} à la fin du stage
         }
-   }
+   
     // --- POST-ACTIONS : Nettoyage ---
     post {
         always {
