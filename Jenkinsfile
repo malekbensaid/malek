@@ -56,16 +56,18 @@ pipeline {
             }
         }
 
-       stage('3. SonarQube Analysis') {
-                   steps {
-                       echo "3. Exécution de l'analyse SonarQube."
-                       // Utilisation des guillemets doubles pour l'interpolation de la variable $SONAR_TOKEN
-                       sh "mvn clean verify sonar:sonar \
-                           -Dsonar.projectKey=students-app \
-                           -Dsonar.host.url=http://127.0.0.1:9000 \
-                           -Dsonar.token=${SONAR_AUTH_TOKEN}" // <-- FERMEZ AVEC UN GUILLEMET DOUBLE ICI
-                   }
-               }
+    stage('3. SonarQube Analysis') {
+                steps {
+                    echo "3. Exécution de l'analyse SonarQube."
+                    // Assurez-vous d'avoir créé le secret 'sonar-auth-token' dans Jenkins
+                    withCredentials([string(credentialsId: 'sonar-auth-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                        sh "mvn clean verify sonar:sonar \
+                            -Dsonar.projectKey=students-app \
+                            -Dsonar.host.url=${SONAR_HOST_URL} \
+                            -Dsonar.token=${SONAR_AUTH_TOKEN}"
+                    }
+                }
+            }
 
 
 
