@@ -63,7 +63,7 @@ pipeline {
                        sh "mvn clean verify sonar:sonar \
                            -Dsonar.projectKey=students-app \
                            -Dsonar.host.url=http://127.0.0.1:9000 \
-                           -Dsonar.token=${SONAR_TOKEN}" // <-- FERMEZ AVEC UN GUILLEMET DOUBLE ICI
+                           -Dsonar.token=${SONAR_AUTH_TOKEN}" // <-- FERMEZ AVEC UN GUILLEMET DOUBLE ICI
                    }
                }
 
