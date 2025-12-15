@@ -66,15 +66,7 @@ pipeline {
             }
         }
 
-//         stage('3.5. SonarQube Quality Gate') {
-//             steps {
-//                 echo "3.5. Attente et vérification du Quality Gate SonarQube..."
-//                 timeout(time: 15, unit: 'MINUTES') {
-//                     echo "Poursuite du pipeline. Le Quality Gate doit être vérifié manuellement (ou avec un plugin/token)."
-//                     // Si le plugin est installé: waitForQualityGate abortPipeline: true
-//                 }
-//             }
-//         }
+
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
         stage('4. Docker Build and Push') {
@@ -91,36 +83,7 @@ pipeline {
             }
         }
 
-        // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
-//         stage('4.5. Start Minikube') {
-//             steps {
-//                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
-//                 sh 'sudo sysctl fs.protected_regular=0'
-//
-//                 withEnv([
-//                     "MINIKUBE_HOME=${WORKSPACE}/minikube_home",
-//                     "CHANGE_MINIKUBE_NONE_USER=true"
-//                 ]) {
-//                     echo "Nettoyage de tout cluster Minikube existant..."
-//                     sh 'sudo MINIKUBE_HOME="${MINIKUBE_HOME}" minikube delete || true'
-//
-//                     echo "Démarrage de Minikube (Driver 'none')..."
-//                     sh "sudo MINIKUBE_HOME=\"${MINIKUBE_HOME}\" minikube start --driver=none --force --memory=2048mb --wait=300s"
-//
-//                     echo "Attribution des permissions et nettoyage de .kube et .minikube..."
-//                     sh 'sudo chown -R $USER:$USER "${MINIKUBE_HOME}"'
-//                     sh 'sudo cp -R /root/.kube $HOME/ || true'
-//                     sh 'sudo cp -R /root/.minikube $HOME/ || true'
-//                     sh 'sudo chown -R $USER:$USER $HOME/.kube $HOME/.minikube'
-//
-//                     echo "Mise à jour du contexte kubectl..."
-//                     sh 'minikube update-context'
-//
-//                     echo "Vérification du statut de Minikube (par l'utilisateur jenkins)..."
-//                     sh 'minikube status'
-//                 }
-//             }
-//         }
+
 
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
         stage('5. Deploy to Kubernetes') {
