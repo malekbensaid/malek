@@ -171,8 +171,9 @@ stage('4.5. Start Minikube') {
         }
     }
 // --- ÉTAPE 6 : Validation de la Connectivité du Déploiement ---
-        stage('6. Deployment Validation') {
-            steps {
+stage('6. Deployment Validation') {
+            steps { // <--- Début du bloc steps
+
                 echo "6. Récupération de l'URL et validation de l'accessibilité de l'application."
 
                 // Récupérer l'URL du service Minikube
@@ -184,7 +185,9 @@ stage('4.5. Start Minikube') {
 
                     // Stocker l'URL dans une variable d'environnement pour une utilisation ultérieure
                     env.APP_URL = appUrl
-                }
+                } // <--- Fin du script {}
+
+                // Les commandes ci-dessous DOIVENT être dans le bloc steps {}
 
                 echo "Application URL: ${env.APP_URL}"
 
@@ -194,7 +197,6 @@ stage('4.5. Start Minikube') {
                     APP_URL_CHECK="${APP_URL}/students" # Exemple d'un endpoint REST qui devrait exister
 
                     for i in $(seq 1 $MAX_ATTEMPTS); do
-                        # Utilisez -k pour ignorer les certificats auto-signés si Minikube utilise le HTTPS (peu probable ici, mais bonne pratique)
                         HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" $APP_URL_CHECK || true)
 
                         if [ "$HTTP_CODE" = "200" ]; then
@@ -207,7 +209,7 @@ stage('4.5. Start Minikube') {
                     echo "❌ Échec de la validation: L'application n'a pas répondu avec un code 200 dans les 60 secondes."
                     exit 1
                 '''
-            }
+            } // <--- Fermeture du bloc steps {} à la fin du stage
         }
     
     // --- POST-ACTIONS : Nettoyage ---
