@@ -77,79 +77,64 @@ stage('4. Docker Build and Push') {
         }
 
 // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
-// stage('4.5. Start Minikube') {
-//             steps {
-//                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
-//                 sh 'sudo sysctl fs.protected_regular=0'
-//
-//                 // Utiliser withEnv pour le MINIKUBE_HOME, c'est très bien.
-//                 withEnv([
-//                     "MINIKUBE_HOME=${WORKSPACE}/minikube_home",
-//                     "CHANGE_MINIKUBE_NONE_USER=true" // Ajout de cette variable pour corriger le KUBECONFIG
-//                 ]) {
-//
-//                     echo "Nettoyage de tout cluster Minikube existant..."
-//                     // Supprimer le || true si Minikube delete est censé réussir.
-//                     sh 'sudo MINIKUBE_HOME="${MINIKUBE_HOME}" minikube delete || true'
-//
-//                     echo "Démarrage de Minikube (Driver 'none')..."
-//                     // Minikube peut prendre jusqu'à 300 secondes pour le driver none
-//                     sh "sudo MINIKUBE_HOME=\"${MINIKUBE_HOME}\" minikube start --driver=none --force --memory=2048mb --wait=300s"
-//
-//                     echo "Attribution des permissions au répertoire MINIKUBE_HOME (créé par root) et nettoyage de .kube et .minikube de jenkins..."
-//
-//                     // Donnez les droits à jenkins sur le dossier de travail.
-//                     sh 'sudo chown -R $USER:$USER "${MINIKUBE_HOME}"'
-//
-//                     // Minikube (exécuté avec sudo) a écrit dans /root. Nous devons copier et donner les droits à jenkins.
-//                     // $HOME est /var/lib/jenkins
-//                     sh 'sudo cp -R /root/.kube $HOME/ || true'
-//                     sh 'sudo cp -R /root/.minikube $HOME/ || true'
-//                     sh 'sudo chown -R $USER:$USER $HOME/.kube $HOME/.minikube'
-//
-//                     // Mise à jour du contexte pour être sûr que kubectl lise la bonne config.
-//                     echo "Mise à jour du contexte kubectl..."
-//                     sh 'minikube update-context'
-//
-//                     echo "Vérification du statut de Minikube (par l'utilisateur jenkins)..."
-//                     // Le statut devrait maintenant être "Running" pour Kubeconfig.
-//                     sh 'minikube status'
-//                 }
-//             }
-//         }
-        // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
-stage('5. Deploy to Kubernetes') {
+stage('4.5. Start Minikube') {
             steps {
-                echo "5. Déploiement de l'application sur Minikube (K8S)."
+                echo "Désactivation temporaire de la protection du noyau pour Minikube..."
+                sh 'sudo sysctl fs.protected_regular=0'
 
-                // --- ÉTAPES DE DÉBOGAGE CRITIQUES ---
-                // Ces commandes vont identifier l'utilisateur du pipeline et les permissions réelles
-                sh "echo '--- DEBUG INFO ---'"
-                sh "whoami"
-                sh "ls -ld /home/vagrant"
-                sh "ls -ld /home/vagrant/.minikube"
-                sh "echo '--------------------'"
-                // ------------------------------------
-
-                // Nous conservons MINIKUBE_HOME, car c'est la configuration requise
+                // Utiliser withEnv pour le MINIKUBE_HOME, c'est très bien.
                 withEnv([
-                "MINIKUBE_HOME=/home/vagrant",
-                "TMPDIR=/var/lib/jenkins/tmp"
+                    "MINIKUBE_HOME=${WORKSPACE}/minikube_home",
+                    "CHANGE_MINIKUBE_NONE_USER=true" // Ajout de cette variable pour corriger le KUBECONFIG
                 ]) {
-                    sh """
-                        # 1. Assurez-vous que le namespace existe
-                        minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f - || true
 
-                        # 2. Appliquer la configuration K8S
-                        minikube kubectl -- apply -f ${DEPLOYMENT_FILE} -n ${NAMESPACE}
+                    echo "Nettoyage de tout cluster Minikube existant..."
+                    // Supprimer le || true si Minikube delete est censé réussir.
+                    sh 'sudo MINIKUBE_HOME="${MINIKUBE_HOME}" minikube delete || true'
 
-                        # 3. Redémarrer le déploiement
-                        minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
-                    """
+                    echo "Démarrage de Minikube (Driver 'none')..."
+                    // Minikube peut prendre jusqu'à 300 secondes pour le driver none
+                    sh "sudo MINIKUBE_HOME=\"${MINIKUBE_HOME}\" minikube start --driver=none --force --memory=2048mb --wait=300s"
+
+                    echo "Attribution des permissions au répertoire MINIKUBE_HOME (créé par root) et nettoyage de .kube et .minikube de jenkins..."
+
+                    // Donnez les droits à jenkins sur le dossier de travail.
+                    sh 'sudo chown -R $USER:$USER "${MINIKUBE_HOME}"'
+
+                    // Minikube (exécuté avec sudo) a écrit dans /root. Nous devons copier et donner les droits à jenkins.
+                    // $HOME est /var/lib/jenkins
+                    sh 'sudo cp -R /root/.kube $HOME/ || true'
+                    sh 'sudo cp -R /root/.minikube $HOME/ || true'
+                    sh 'sudo chown -R $USER:$USER $HOME/.kube $HOME/.minikube'
+
+                    // Mise à jour du contexte pour être sûr que kubectl lise la bonne config.
+                    echo "Mise à jour du contexte kubectl..."
+                    sh 'minikube update-context'
+
+                    echo "Vérification du statut de Minikube (par l'utilisateur jenkins)..."
+                    // Le statut devrait maintenant être "Running" pour Kubeconfig.
+                    sh 'minikube status'
                 }
             }
         }
-      }
+        // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
+        stage('5. Deploy to Kubernetes') {
+            steps {
+                echo "5. Déploiement de l'application sur Minikube (K8S)."
+
+                sh """
+                    # 1. Assurez-vous que le namespace existe
+                    minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f - || true
+
+                    # 2. Appliquer la configuration K8S (avec le fichier propre)
+                    minikube kubectl -- apply -f ${DEPLOYMENT_FILE} -n ${NAMESPACE}
+
+                    # 3. Redémarrer le déploiement pour s'assurer que la dernière image est utilisée
+                    minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
+                """
+            }
+        }
+    }
 
     // --- POST-ACTIONS : Nettoyage ---
     post {
@@ -159,4 +144,4 @@ stage('5. Deploy to Kubernetes') {
             cleanWs()
         }
     }
-}
+}}
