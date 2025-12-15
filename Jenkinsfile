@@ -63,7 +63,7 @@ stage('2. Start SonarQube') {
 stage('3.SonarQube Analysis') {
             steps {
                 echo 'Analyse de la qualité du code avec SonarQube'
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                withCredentials([string(credentialsId: 'jenkins-token-sonar', variable: 'SONAR_AUTH_TOKEN')]) {
                     sh '''
                         mvn sonar:sonar \
                         -Dsonar.projectKey=student-management \
