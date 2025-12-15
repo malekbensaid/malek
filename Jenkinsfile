@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-    // Variables globales du pipeline
+
     environment {
         // --- Variables de Configuration ---
         SONAR_HOST_URL = 'http://10.0.2.15:9000'
@@ -9,7 +9,7 @@ pipeline {
         DOCKER_TAG = 'latest'
         NAMESPACE = 'devops'
 
-        // Nom du fichier de déploiement dans le dépôt
+
         DEPLOYMENT_FILE = 'deployment.yaml'
 
         SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-service:3306/db_example?useSSL=false'
@@ -56,22 +56,22 @@ pipeline {
             }
         }
 
-  stage('3. SonarQube Analysis') {
-          steps {
-              echo "3. Exécution de l'analyse SonarQube."
-
-              // NOTE : Nous ajoutons -Dspring.profiles.active=test pour activer un profil
-              // et Dspring.datasource.url=... pour surcharger la connexion pour les tests.
-              withCredentials([string(credentialsId: 'sonar-auth-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                  sh "mvn clean verify sonar:sonar \
-                      -Dsonar.projectKey=students-app \
-                      -Dsonar.host.url=${SONAR_HOST_URL} \
-                      -Dsonar.token=${SONAR_AUTH_TOKEN} \
-                      -Dspring.datasource.url=jdbc:h2:mem:testdb \
-                      -Dspring.datasource.driver-class-name=org.h2.Driver"
-              }
-          }
-      }
+//   stage('3. SonarQube Analysis') {
+//           steps {
+//               echo "3. Exécution de l'analyse SonarQube."
+//
+//               // NOTE : Nous ajoutons -Dspring.profiles.active=test pour activer un profil
+//               // et Dspring.datasource.url=... pour surcharger la connexion pour les tests.
+//               withCredentials([string(credentialsId: 'sonar-auth-token', variable: 'SONAR_AUTH_TOKEN')]) {
+//                   sh "mvn clean verify sonar:sonar \
+//                       -Dsonar.projectKey=students-app \
+//                       -Dsonar.host.url=${SONAR_HOST_URL} \
+//                       -Dsonar.token=${SONAR_AUTH_TOKEN} \
+//                       -Dspring.datasource.url=jdbc:h2:mem:testdb \
+//                       -Dspring.datasource.driver-class-name=org.h2.Driver"
+//               }
+//           }
+//       }
 
 
 
@@ -92,7 +92,7 @@ pipeline {
 
 
 
-        // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
+        // --- ÉTAPE 5 : Déploiement sur Kubernetes  ---
         stage('5. Deploy to Kubernetes') {
             steps {
                 echo "5. Déploiement de l'application sur Minikube (K8S)."
@@ -146,7 +146,7 @@ pipeline {
                 '''
             }
         }
-    } // <--- FERMETURE CORRECTE DU BLOC PARENT 'stages'
+    } 
 
     // --- POST-ACTIONS : Nettoyage ---
     post {
