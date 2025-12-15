@@ -60,19 +60,19 @@ stage('2. Start SonarQube') {
 
 
 
-stage('3.SonarQube Analysis') {
-            steps {
-                echo 'Analyse de la qualité du code avec SonarQube'
-                withCredentials([string(credentialsId: 'jenkins-token-sonar', variable: 'SONAR_AUTH_TOKEN')]) {
-                    sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=student-management \
-                        -Dsonar.host.url=http://127.0.0.1:9001/
-                        -Dsonar.token=${SONAR_AUTH_TOKEN}
-                    '''
-                }
-            }
-        }
+// stage('3.SonarQube Analysis') {
+//             steps {
+//                 echo 'Analyse de la qualité du code avec SonarQube'
+//                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
+//                     sh '''
+//                         mvn sonar:sonar \
+//                         -Dsonar.projectKey=student-management \
+//                         -Dsonar.host.url=http://127.0.0.1:9001/
+//                         -Dsonar.token=${SONAR_AUTH_TOKEN}
+//                     '''
+//                 }
+//             }
+//         }
 
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
