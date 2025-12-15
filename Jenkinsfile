@@ -56,15 +56,16 @@ pipeline {
             }
         }
 
-        stage('3. SonarQube Analysis') {
-            steps {
-                echo "3. Exécution de l'analyse SonarQube."
-                sh 'mvn clean verify sonar:sonar \
-                    -Dsonar.projectKey=students-app \
-                    -Dsonar.host.url=http://127.0.0.1:9000 \
-                    -Dsonar.token=$SONAR_TOKEN
-            }
-        }
+       stage('3. SonarQube Analysis') {
+                   steps {
+                       echo "3. Exécution de l'analyse SonarQube."
+                       // Utilisation des guillemets doubles pour l'interpolation de la variable $SONAR_TOKEN
+                       sh "mvn clean verify sonar:sonar \
+                           -Dsonar.projectKey=students-app \
+                           -Dsonar.host.url=http://127.0.0.1:9000 \
+                           -Dsonar.token=${SONAR_TOKEN}" // <-- FERMEZ AVEC UN GUILLEMET DOUBLE ICI
+                   }
+               }
 
 
 
