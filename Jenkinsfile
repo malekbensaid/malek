@@ -77,46 +77,46 @@ stage('4. Docker Build and Push') {
         }
 
 // --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
-// stage('4.5. Start Minikube') {
-//             steps {
-//                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
-//                 sh 'sudo sysctl fs.protected_regular=0'
-//
-//                 // Utiliser withEnv pour le MINIKUBE_HOME, c'est très bien.
-//                 withEnv([
-//                     "MINIKUBE_HOME=${WORKSPACE}/minikube_home",
-//                     "CHANGE_MINIKUBE_NONE_USER=true" // Ajout de cette variable pour corriger le KUBECONFIG
-//                 ]) {
-//
-//                     echo "Nettoyage de tout cluster Minikube existant..."
-//                     // Supprimer le || true si Minikube delete est censé réussir.
-//                     sh 'sudo MINIKUBE_HOME="${MINIKUBE_HOME}" minikube delete || true'
-//
-//                     echo "Démarrage de Minikube (Driver 'none')..."
-//                     // Minikube peut prendre jusqu'à 300 secondes pour le driver none
-//                     sh "sudo MINIKUBE_HOME=\"${MINIKUBE_HOME}\" minikube start --driver=none --force --memory=2048mb --wait=300s"
-//
-//                     echo "Attribution des permissions au répertoire MINIKUBE_HOME (créé par root) et nettoyage de .kube et .minikube de jenkins..."
-//
-//                     // Donnez les droits à jenkins sur le dossier de travail.
-//                     sh 'sudo chown -R $USER:$USER "${MINIKUBE_HOME}"'
-//
-//                     // Minikube (exécuté avec sudo) a écrit dans /root. Nous devons copier et donner les droits à jenkins.
-//                     // $HOME est /var/lib/jenkins
-//                     sh 'sudo cp -R /root/.kube $HOME/ || true'
-//                     sh 'sudo cp -R /root/.minikube $HOME/ || true'
-//                     sh 'sudo chown -R $USER:$USER $HOME/.kube $HOME/.minikube'
-//
-//                     // Mise à jour du contexte pour être sûr que kubectl lise la bonne config.
-//                     echo "Mise à jour du contexte kubectl..."
-//                     sh 'minikube update-context'
-//
-//                     echo "Vérification du statut de Minikube (par l'utilisateur jenkins)..."
-//                     // Le statut devrait maintenant être "Running" pour Kubeconfig.
-//                     sh 'minikube status'
-//                 }
-//             }
-//         }
+stage('4.5. Start Minikube') {
+            steps {
+                echo "Désactivation temporaire de la protection du noyau pour Minikube..."
+                sh 'sudo sysctl fs.protected_regular=0'
+
+                // Utiliser withEnv pour le MINIKUBE_HOME, c'est très bien.
+                withEnv([
+                    "MINIKUBE_HOME=${WORKSPACE}/minikube_home",
+                    "CHANGE_MINIKUBE_NONE_USER=true" // Ajout de cette variable pour corriger le KUBECONFIG
+                ]) {
+
+                    echo "Nettoyage de tout cluster Minikube existant..."
+                    // Supprimer le || true si Minikube delete est censé réussir.
+                    sh 'sudo MINIKUBE_HOME="${MINIKUBE_HOME}" minikube delete || true'
+
+                    echo "Démarrage de Minikube (Driver 'none')..."
+                    // Minikube peut prendre jusqu'à 300 secondes pour le driver none
+                    sh "sudo MINIKUBE_HOME=\"${MINIKUBE_HOME}\" minikube start --driver=none --force --memory=2048mb --wait=300s"
+
+                    echo "Attribution des permissions au répertoire MINIKUBE_HOME (créé par root) et nettoyage de .kube et .minikube de jenkins..."
+
+                    // Donnez les droits à jenkins sur le dossier de travail.
+                    sh 'sudo chown -R $USER:$USER "${MINIKUBE_HOME}"'
+
+                    // Minikube (exécuté avec sudo) a écrit dans /root. Nous devons copier et donner les droits à jenkins.
+                    // $HOME est /var/lib/jenkins
+                    sh 'sudo cp -R /root/.kube $HOME/ || true'
+                    sh 'sudo cp -R /root/.minikube $HOME/ || true'
+                    sh 'sudo chown -R $USER:$USER $HOME/.kube $HOME/.minikube'
+
+                    // Mise à jour du contexte pour être sûr que kubectl lise la bonne config.
+                    echo "Mise à jour du contexte kubectl..."
+                    sh 'minikube update-context'
+
+                    echo "Vérification du statut de Minikube (par l'utilisateur jenkins)..."
+                    // Le statut devrait maintenant être "Running" pour Kubeconfig.
+                    sh 'minikube status'
+                }
+            }
+        }
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
         stage('5. Deploy to Kubernetes') {
             steps {
