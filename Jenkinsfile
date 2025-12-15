@@ -119,26 +119,33 @@ stage('4. Docker Build and Push') {
 //         }
         // --- ÉTAPE 5 : Déploiement sur Kubernetes (SIMPLIFIÉ) ---
 stage('5. Deploy to Kubernetes') {
-    steps {
-        echo "5. Déploiement de l'application sur Minikube (K8S)."
+            steps {
+                echo "5. Déploiement de l'application sur Minikube (K8S)."
 
-        // --- NOUVEAU : Définir le chemin de configuration Minikube ---
-        withEnv(["MINIKUBE_HOME=/home/vagrant"]) { // L'utilisateur Minikube est 'vagrant'
-            sh """
-                # 1. Assurez-vous que le namespace existe
-                # Note: 'minikube kubectl' utilise maintenant /home/vagrant/.minikube/
-                minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f - || true
+                // --- ÉTAPES DE DÉBOGAGE CRITIQUES ---
+                // Ces commandes vont identifier l'utilisateur du pipeline et les permissions réelles
+                sh "echo '--- DEBUG INFO ---'"
+                sh "whoami"
+                sh "ls -ld /home/vagrant"
+                sh "ls -ld /home/vagrant/.minikube"
+                sh "echo '--------------------'"
+                // ------------------------------------
 
-                # 2. Appliquer la configuration K8S (avec le fichier propre)
-                minikube kubectl -- apply -f ${DEPLOYMENT_FILE} -n ${NAMESPACE}
+                // Nous conservons MINIKUBE_HOME, car c'est la configuration requise
+                withEnv(["MINIKUBE_HOME=/home/vagrant"]) {
+                    sh """
+                        # 1. Assurez-vous que le namespace existe
+                        minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f - || true
 
-                # 3. Redémarrer le déploiement pour s'assurer que la dernière image est utilisée
-                minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
-            """
+                        # 2. Appliquer la configuration K8S
+                        minikube kubectl -- apply -f ${DEPLOYMENT_FILE} -n ${NAMESPACE}
+
+                        # 3. Redémarrer le déploiement
+                        minikube kubectl -- rollout restart deployment students-app-deployment -n ${NAMESPACE}
+                    """
+                }
+            }
         }
-    }
-}
-}
 
     // --- POST-ACTIONS : Nettoyage ---
     post {
