@@ -56,7 +56,22 @@ stage('2. Start SonarQube') {
                 echo "Latence de 30 secondes pour la stabilité interne de SonarQube..."
                 sh 'sleep 30'
             }
-        }    
+        }
+stage('3. SonarQube Analysis') {
+            steps {
+                echo "3. Exécution de l'analyse SonarQube."
+
+                // Exécute le scan Maven.
+                // Le projet Spring Boot est basé sur Maven, donc cette commande est standard.
+                sh 'mvn clean verify sonar:sonar \
+                    -Dsonar.projectKey=students-app \
+                    -Dsonar.host.url=http://127.0.0.1:9000 \
+                    -Dsonar.login=admin \
+                    -Dsonar.password=admin' // Utiliser le login/mot de passe par défaut pour simplifier (SonarQube 9.9)
+
+                echo "Analyse SonarQube terminée. Voir les résultats sur http://votre-ip-jenkins:9000"
+            }
+        }
         
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
