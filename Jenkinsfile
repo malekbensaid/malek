@@ -144,4 +144,4 @@ stage('4.5. Start Minikube') {
             cleanWs()
         }
     }
-}}
+}
