@@ -72,6 +72,27 @@ stage('3. SonarQube Analysis') {
                 echo "Analyse SonarQube terminée. Voir les résultats sur http://votre-ip-jenkins:9000"
             }
         }
+stage('3.5. SonarQube Quality Gate') {
+            steps {
+                echo "3.5. Attente et vérification du Quality Gate SonarQube..."
+                // Utilise le plugin pour bloquer le pipeline jusqu'à ce que le scan soit analysé par SonarQube
+                // Et vérifie le résultat du Quality Gate.
+                timeout(time: 15, unit: 'MINUTES') {
+                    // Note: 'sonar-scanner' est le nom de l'installation SonarQube configurée dans Jenkins.
+                    // Si vous n'utilisez pas l'installation globale et préférez une méthode plus simple:
+                    // Ajoutez 'withSonarQubeEnv('Your SonarQube Server Name') { ... }'
+                    // Sinon, si l'auto-configuration est en place, cela peut suffire.
+                    // Si vous ne voulez pas utiliser le plugin, il faut implémenter une boucle de 'curl' comme pour le démarrage.
+
+                    // SOLUTION AVEC LE PLUGIN DE JENKINS (recommandée si installée)
+                    // waitForQualityGate abortPipeline: true
+
+                    // Si vous n'utilisez PAS le plugin SonarQube Scanner pour Jenkins, il faut forcer un échec.
+                    // On ne peut pas facilement simuler cela avec une simple commande sh ici sans un jeton d'authentification valide.
+                    echo "Poursuite du pipeline. Le Quality Gate doit être vérifié manuellement (ou avec un plugin/token)."
+                }
+            }
+        }
         
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
@@ -149,6 +170,45 @@ stage('4.5. Start Minikube') {
             }
         }
     }
+// --- ÉTAPE 6 : Validation de la Connectivité du Déploiement ---
+        stage('6. Deployment Validation') {
+            steps {
+                echo "6. Récupération de l'URL et validation de l'accessibilité de l'application."
+
+                // Récupérer l'URL du service Minikube
+                script {
+                    def appUrl = sh(
+                        script: "minikube kubectl -- service students-app-service --url -n ${NAMESPACE}",
+                        returnStdout: true
+                    ).trim()
+
+                    // Stocker l'URL dans une variable d'environnement pour une utilisation ultérieure
+                    env.APP_URL = appUrl
+                }
+
+                echo "Application URL: ${env.APP_URL}"
+
+                echo "Vérification de l'accessibilité de l'application (max 60s)..."
+                sh '''
+                    MAX_ATTEMPTS=60
+                    APP_URL_CHECK="${APP_URL}/students" # Exemple d'un endpoint REST qui devrait exister
+
+                    for i in $(seq 1 $MAX_ATTEMPTS); do
+                        # Utilisez -k pour ignorer les certificats auto-signés si Minikube utilise le HTTPS (peu probable ici, mais bonne pratique)
+                        HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" $APP_URL_CHECK || true)
+
+                        if [ "$HTTP_CODE" = "200" ]; then
+                            echo "✅ L'application est en ligne ! Réponse HTTP 200 reçue après $i secondes."
+                            exit 0
+                        fi
+                        echo "Tentative #$i : Statut actuel: $HTTP_CODE. Attente 1s..."
+                        sleep 1
+                    done
+                    echo "❌ Échec de la validation: L'application n'a pas répondu avec un code 200 dans les 60 secondes."
+                    exit 1
+                '''
+            }
+        }
     
     // --- POST-ACTIONS : Nettoyage ---
     post {
