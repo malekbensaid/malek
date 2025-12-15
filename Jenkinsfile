@@ -132,7 +132,10 @@ stage('5. Deploy to Kubernetes') {
                 // ------------------------------------
 
                 // Nous conservons MINIKUBE_HOME, car c'est la configuration requise
-                withEnv(["MINIKUBE_HOME=/home/vagrant"]) {
+                withEnv([
+                "MINIKUBE_HOME=/home/vagrant",
+                "TMPDIR=/var/lib/jenkins/tmp"
+                ]) {
                     sh """
                         # 1. Assurez-vous que le namespace existe
                         minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f - || true
