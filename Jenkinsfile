@@ -58,7 +58,21 @@ stage('2. Start SonarQube') {
             }
         }
 
+stage('3. SonarQube Analysis') {
+        steps {
+            echo "3. Exécution de l'analyse SonarQube."
 
+
+            withCredentials([string(credentialsId: 'sonar-auth-token', variable: 'sonar-auth-token')]) {
+                sh "mvn clean verify sonar:sonar \
+                    -Dsonar.projectKey=students-app \
+                    -Dsonar.host.url=${SONAR_HOST_URL} \
+                    -Dsonar.token=${sonar-auth-token} \
+                    -Dspring.datasource.url=jdbc:h2:mem:testdb \
+                    -Dspring.datasource.driver-class-name=org.h2.Driver"
+            }
+        }
+    }
 
         // --- ÉTAPE 4 : Création et Envoi de l'Image Docker ---
 stage('4. Docker Build and Push') {
