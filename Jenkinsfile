@@ -138,6 +138,7 @@ stage('5. Deploy to Kubernetes') {
         }
     }
 }
+}
 
     // --- POST-ACTIONS : Nettoyage ---
     post {
