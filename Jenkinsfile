@@ -91,7 +91,7 @@ stage('4. Docker Build and Push') {
             }
         }
 
-// --- 4.5. NOUVEAU STAGE : Démarrage Minikube ---
+
 stage('4.5. Start Minikube') {
             steps {
                 echo "Désactivation temporaire de la protection du noyau pour Minikube..."
@@ -153,10 +153,11 @@ stage('4.5. Start Minikube') {
 
     // --- POST-ACTIONS : Nettoyage ---
     post {
-        always {
-            echo "Nettoyage : Arrêt et suppression du conteneur SonarQube..."
-            sh "sudo docker rm -f sonarqube || true"
-            cleanWs()
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed!'
         }
     }
 }
