@@ -153,11 +153,10 @@ stage('4.5. Start Minikube') {
 
     // --- POST-ACTIONS : Nettoyage ---
     post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Pipeline failed!'
+        always {
+            echo "Nettoyage : Arrêt et suppression du conteneur SonarQube..."
+            sh "sudo docker rm -f sonarqube || true"
+            cleanWs()
         }
     }
 }
